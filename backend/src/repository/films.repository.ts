@@ -1,55 +1,61 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 import { FilmDto, SessionDto } from '../films/dto/films.dto';
-import { FilmDocument } from '../films/film.schema';
+import { Film } from '../entities/film.entity';
+import { Schedule } from '../entities/schedule.entity';
 
 @Injectable()
 export class FilmsRepository {
   constructor(
-    @InjectModel('Film')
-    private readonly filmModel: Model<FilmDocument>,
+    @InjectRepository(Film)
+    private readonly filmRepository: Repository<Film>,
+    @InjectRepository(Schedule)
+    private readonly scheduleRepository: Repository<Schedule>,
   ) {}
 
   async findAll(): Promise<FilmDto[]> {
-    const docs = await this.filmModel.find({}).lean().exec();
+    const films = await this.filmRepository.find({
+      order: { created_at: 'ASC' },
+    });
 
-    return docs.map(
-      (doc): FilmDto => ({
-        id: doc.id,
-        rating: doc.rating,
-        director: doc.director,
-        tags: doc.tags,
-        title: doc.title,
-        about: doc.about,
-        description: doc.description,
-        image: doc.image,
-        cover: doc.cover,
+    return films.map(
+      (film): FilmDto => ({
+        id: film.id,
+        rating: Number(film.rating),
+        director: film.director,
+        tags: film.tags,
+        title: film.title,
+        about: film.about,
+        description: film.description,
+        image: film.image,
+        cover: film.cover,
       }),
     );
   }
 
   async findSessionsByFilm(id: string): Promise<SessionDto[]> {
-    const doc = await this.filmModel.findOne({ id }).lean().exec();
-    if (!doc) {
+    const film = await this.filmRepository.findOne({
+      where: { id },
+      relations: ['schedules'],
+    });
+
+    if (!film || !film.schedules) {
       return [];
     }
 
-    return doc.schedule.map(
-      (s): SessionDto => ({
-        id: s.id,
-        film: doc.id,
-        daytime: s.daytime,
-        hall: String(s.hall),
-        rows: s.rows,
-        seats: s.seats,
-        price: s.price,
-        taken: s.taken,
+    return film.schedules.map(
+      (schedule): SessionDto => ({
+        id: schedule.id,
+        film: film.id,
+        daytime: schedule.daytime.toISOString(),
+        hall: String(schedule.hall),
+        rows: schedule.rows,
+        seats: schedule.seats,
+        price: Number(schedule.price),
+        taken: schedule.taken,
       }),
     );
   }
 }
-
-
-
