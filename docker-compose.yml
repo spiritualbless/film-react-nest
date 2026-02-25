@@ -1,0 +1,82 @@
+version: "3.9"
+
+services:
+  frontend-build:
+    image: ghcr.io/spiritualbless/film-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    working_dir: /app
+    command: ["sh", "-c", "cp -r dist/* /frontend-dist"]
+    volumes:
+      - frontend-dist:/frontend-dist
+
+  backend:
+    image: ghcr.io/spiritualbless/film-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      DB_SYNCHRONIZE: "true"
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USERNAME: film_user
+      DATABASE_PASSWORD: film_password
+      DATABASE_NAME: film_db
+    depends_on:
+      - postgres
+    ports:
+      - "3000:3000"
+    networks:
+      - film-net
+
+  nginx:
+    image: ghcr.io/spiritualbless/film-nginx:latest
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    depends_on:
+      - frontend-build
+      - backend
+    ports:
+      - "80:80"
+    volumes:
+      - frontend-dist:/usr/share/nginx/html
+    networks:
+      - film-net
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: film_user
+      POSTGRES_PASSWORD: film_password
+      POSTGRES_DB: film_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - film-net
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    networks:
+      - film-net
+
+volumes:
+  frontend-dist:
+  pgdata:
+  pgadmin-data:
+
+networks:
+  film-net:
+    driver: bridge
+

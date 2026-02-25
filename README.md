@@ -1,5 +1,12 @@
 # FILM!
 
+## Задеплоенный проект
+
+- **Сайт (афиша):** [starjunk.students.nomorepartiessite.ru](https://starjunk.students.nomorepartiessite.ru)
+- **pgAdmin** доступен только через SSH-туннель: `ssh -L 8080:localhost:8080 user@starjunk.students.nomorepartiessite.ru`, затем в браузере — `http://localhost:8080`.
+
+---
+
 ## Установка
 
 ### MongoDB
